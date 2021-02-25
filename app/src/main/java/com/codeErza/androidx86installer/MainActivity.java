@@ -8,6 +8,8 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import java.io.DataOutputStream;
@@ -28,6 +30,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     String bbox = null;
     String fs[] = {"None","ext4"};
+    String workspace = "/data/local/tmp/mnt/andIns";
+    String tBlock = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,7 +43,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         setSpinner(R.id.spnDevice,fetchDevices());
         setSpinner(R.id.spnFormat,fs);
-        setStatus(runShell("chmod 777 "+bbox));
 
     }
 
@@ -53,7 +57,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
+        tBlock = parent.getItemAtPosition(position).toString();
+        runSu(bbox+" mkdir -p "+workspace);
+        runSu(bbox+" mount "+tBlock+" "+workspace);
+        setStatus(runSu(bbox+" ls -1 "+workspace));
+        runSu(bbox+" umount "+workspace);
     }
 
     @Override
@@ -63,44 +71,24 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     public String[] fetchDevices(){
         String[] data = null;
-        try{
-            Process sh = Runtime.getRuntime().exec("sh");
-            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+        String out = runShell("ls /dev/block/");
 
-            outputStream.writeBytes("cat /proc/partitions\n");
-            outputStream.flush();
+        Pattern r = Pattern.compile("([^\\n]+)");
 
-            outputStream.writeBytes("exit\n");
-            outputStream.flush();
-            sh.waitFor();
-            String out = "";
-            String line = null;
-            while ((line = stdInput.readLine()) != null) {
-                out = out + "\n" + line;
-            }
+        Matcher m = r.matcher(out);
 
-            Pattern r = Pattern.compile("\\d+ +\\d+ +\\d+ +([^ ^\\n]+)");
+        ArrayList<String> devices = new ArrayList<String>();
 
-            Matcher m = r.matcher(out);
+        while(m.find()){
+            devices.add("/dev/block/"+m.group(1));
+        }
+        data = new String[devices.size()];
 
-            ArrayList<String> devices = new ArrayList<String>();
+        Object[] objArr = devices.toArray();
 
-            while(m.find()){
-                devices.add(m.group(1));
-            }
-            data = new String[devices.size()];
-
-            Object[] objArr = devices.toArray();
-
-            int i = 0;
-            for (Object obj : objArr) {
-                data[i++] = (String)obj;
-            }
-        }catch(IOException e){
-            reporter(e);
-        }catch(InterruptedException e){
-            reporter(e);
+        int i = 0;
+        for (Object obj : objArr) {
+            data[i++] = (String)obj;
         }
         return data;
     }
@@ -209,6 +197,51 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         int read;
         while((read = in.read(buffer)) != -1){
             out.write(buffer, 0, read);
+        }
+    }
+
+    public void install(View view){
+        EditText inputName = findViewById(R.id.inpName);
+        EditText inputSize = findViewById(R.id.inpSize);
+        String folderName = inputName.getText().toString();
+        CheckBox box = findViewById(R.id.chkConfirm);
+
+        String strSize = inputSize.getText().toString();
+        if( strSize.equals("")){
+            setStatus("Invalid size");
+            return;
+        }
+
+        int size = Integer.parseInt(strSize);
+
+        Pattern r = Pattern.compile("([a-zA-Z0-9_]+)");
+
+        Matcher m = r.matcher(folderName);
+
+        if(m.find()){
+            if (folderName.equals(m.group(1))){
+                if(box.isChecked()){
+                    setStatus("Installing..");
+                    runSu(bbox+" mount "+tBlock+" "+workspace);
+                    runSu(bbox+" mkdir -p "+workspace+"/"+folderName);
+                    setStatus("Copying system files..");
+                    runSu(bbox+" cp /gearlock/gearroot/system.sfs "+workspace+"/"+folderName+"/");
+                    runSu(bbox+" cp /gearlock/gearroot/kernel "+workspace+"/"+folderName+"/");
+                    runSu(bbox+" cp /gearlock/gearroot/initrd.img "+workspace+"/"+folderName+"/");
+                    runSu(bbox+" cp /gearlock/gearroot/ramdisk.img "+workspace+"/"+folderName+"/");
+                    runSu(bbox+" cp /gearlock/gearroot/gearlock "+workspace+"/"+folderName+"/");
+                    runSu(bbox+" dd if=/dev/zero of="+workspace+"/"+folderName+"/data.img bs=1G count="+size);
+                    runSu(bbox+" mke2fs -t ext4 "+workspace+"/"+folderName+"/data.img");
+                    runSu(bbox+" umount "+workspace);
+                    setStatus("Install finished.");
+                }else{
+                    setStatus("Confirm partition");
+                }
+            }else{
+                setStatus("Invalid name");
+            }
+        }else{
+            setStatus("Invalid name");
         }
     }
 }
