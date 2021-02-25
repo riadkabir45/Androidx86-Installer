@@ -1,4 +1,4 @@
-com/codeErza/androidx86installer/MainActivity.java
- com.codeErza.androidx86installer.MainActivity
 com/codeErza/androidx86installer/BuildConfig.java
  com.codeErza.androidx86installer.BuildConfig
+com/codeErza/androidx86installer/MainActivity.java
+ com.codeErza.androidx86installer.MainActivity
