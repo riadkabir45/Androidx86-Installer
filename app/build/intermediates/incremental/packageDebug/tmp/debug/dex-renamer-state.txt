@@ -1,4 +1,4 @@
-#Thu Feb 25 17:19:23 BDT 2021
+#Thu Feb 25 17:58:58 BDT 2021
 base.0=/home/riad/AndroidStudioProjects/Androidx86Installer/app/build/intermediates/dex/debug/mergeDexDebug/classes.dex
 path.0=classes.dex
 renamed.0=classes.dex

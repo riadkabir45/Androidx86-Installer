@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.res.AssetManager;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -25,19 +26,20 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
-    //String block[] = {"/dev/sda","/dev/sdb3"};
+    String bbox = null;
     String fs[] = {"None","ext4"};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //context.getAssets()
-        copyAsset(getAssets(),"busybox","/data/data/"+getPackageName()+"/busybox");
+        bbox = "/data/data/"+getPackageName()+"/busybox";
+        copyAsset(getAssets(),"busybox",bbox);
 
         setSpinner(R.id.spnDevice,fetchDevices());
         setSpinner(R.id.spnFormat,fs);
-        setStatus(runShell("ls /sdcard/"));
+        setStatus(runShell("chmod 777 "+bbox));
+
     }
 
 
@@ -109,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             Process sh = Runtime.getRuntime().exec("sh");
             DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
             BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+            BufferedReader stdErr = new BufferedReader(new InputStreamReader(sh.getErrorStream()));
 
             outputStream.writeBytes(comnd+"\n");
             outputStream.flush();
@@ -119,6 +122,39 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             data = "";
             String line = null;
             while ((line = stdInput.readLine()) != null) {
+                data = data + "\n" + line;
+            }
+            while ((line = stdErr.readLine()) != null) {
+                data = data + "\n" + line;
+            }
+        }catch(IOException e){
+            reporter(e);
+        }catch(InterruptedException e){
+            reporter(e);
+        }
+        return data;
+    }
+
+    public String runSu(String comnd){
+        String data = null;
+        try{
+            Process sh = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(sh.getOutputStream());
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(sh.getInputStream()));
+            BufferedReader stdErr = new BufferedReader(new InputStreamReader(sh.getErrorStream()));
+
+            outputStream.writeBytes(comnd+"\n");
+            outputStream.flush();
+
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            sh.waitFor();
+            data = "";
+            String line = null;
+            while ((line = stdInput.readLine()) != null) {
+                data = data + "\n" + line;
+            }
+            while ((line = stdErr.readLine()) != null) {
                 data = data + "\n" + line;
             }
         }catch(IOException e){
@@ -143,6 +179,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     public void setStatus(String outTxt){
         TextView txt = findViewById(R.id.txtList);
+        txt.setMovementMethod(new ScrollingMovementMethod());
         txt.setText(outTxt);
     }
 

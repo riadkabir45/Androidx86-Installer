@@ -187,6 +187,7 @@
         android:layout_marginRight="10dp"
         android:layout_marginBottom="10dp"
         android:background="#8B554F4F"
+        android:scrollbars = "vertical"
         android:text="Partition content"
         app:layout_constraintBottom_toTopOf="@+id/gl5"
         app:layout_constraintEnd_toStartOf="@+id/glRight"
