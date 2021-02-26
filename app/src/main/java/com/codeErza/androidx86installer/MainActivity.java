@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         bbox = "/data/data/"+getPackageName()+"/busybox";
         copyAsset(getAssets(),"busybox",bbox);
+        runSu("chmod 777 "+bbox);
 
         setSpinner(R.id.spnDevice,fetchDevices());
         setSpinner(R.id.spnFormat,fs);
